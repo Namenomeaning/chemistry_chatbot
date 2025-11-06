@@ -1,15 +1,73 @@
 services:
+  mongodb:
+    image: mongo:8.0
+    container_name: chemistry_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    environment:
+      - MONGO_INITDB_DATABASE=chemistry_db
+    restart: unless-stopped
+    networks:
+      - chemistry_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   qdrant:
-    image: qdrant/qdrant:v1.8.0
+    image: qdrant/qdrant:v1.15.5
     container_name: chemistry_qdrant
     ports:
       - "6333:6333"
       - "6334:6334"
     volumes:
-      - ./qdrant_storage:/qdrant/storage
+      - qdrant_data:/qdrant/storage
     environment:
       - QDRANT__SERVICE__GRPC_PORT=6334
     restart: unless-stopped
+    networks:
+      - chemistry_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: chemistry_minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    networks:
+      - chemistry_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio-setup:
+    image: minio/mc:latest
+    container_name: chemistry_minio_setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./scripts/setup_minio.sh:/setup.sh
+    entrypoint: /bin/sh
+    command: /setup.sh
     networks:
       - chemistry_network
 
@@ -18,4 +76,7 @@ networks:
     driver: bridge
 
 volumes:
-  qdrant_storage:
+  mongodb_data:
+  mongodb_config:
+  qdrant_data:
+  minio_data:

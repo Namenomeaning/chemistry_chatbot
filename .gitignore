@@ -53,10 +53,9 @@ Thumbs.db
 .ipynb_checkpoints/
 *.ipynb
 
-# Audio files (generated TTS)
-audio_output/
-*.mp3
-*.wav
+# Generated audio files (TTS) - keep structure, ignore generated files
+src/data/audio/**/*.wav
+src/data/audio/**/*.mp3
 
 # Logs
 *.log
@@ -67,5 +66,7 @@ logs/
 .coverage
 htmlcov/
 
-# Data (if large)
-data/temp/
+# Temporary data
+src/data/temp/
+
+CLAUDE.md

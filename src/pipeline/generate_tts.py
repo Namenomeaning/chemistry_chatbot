@@ -12,9 +12,7 @@ import time
 load_dotenv()
 
 # Paths
-DATA_DIR = Path("data/compounds")
-OUTPUT_DIR = Path("audio_output")
-OUTPUT_DIR.mkdir(exist_ok=True)
+COMPOUNDS_FILE = Path(__file__).parent.parent / "data" / "compounds.json"
 
 # Initialize Gemini client
 api_key = os.getenv("GOOGLE_GEMINI_API_KEY")
@@ -28,14 +26,24 @@ def wave_file(filename, pcm, channels=1, rate=24000, sample_width=2):
         wf.setframerate(rate)
         wf.writeframes(pcm)
 
-# Process all compound files
-for json_file in DATA_DIR.glob("*.json"):
-    with open(json_file, "r", encoding="utf-8") as f:
-        data = json.load(f)
+# Load all compounds from single JSON file
+print(f"Loading compounds from {COMPOUNDS_FILE}...")
+with open(COMPOUNDS_FILE, "r", encoding="utf-8") as f:
+    compounds = json.load(f)
 
+print(f"Found {len(compounds)} compounds\n")
+
+# Create audio directory (no subdirectories)
+audio_dir = Path(__file__).parent.parent / "data" / "audio"
+audio_dir.mkdir(parents=True, exist_ok=True)
+
+# Process all compounds
+for data in compounds:
     doc_id = data["doc_id"]
     iupac_name = data["iupac_name"]
-    audio_path = OUTPUT_DIR / f"{doc_id}.wav"
+
+    # Simple path: all audio files in single directory
+    audio_path = audio_dir / f"{doc_id}.wav"
 
     # Generate TTS using Gemini
     response = client.models.generate_content(
