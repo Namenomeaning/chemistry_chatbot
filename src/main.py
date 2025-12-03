@@ -26,6 +26,40 @@ load_dotenv(override=True)
 logger = setup_logging(__name__)
 
 
+def file_to_base64(file_path: Optional[str]) -> Optional[str]:
+    """Convert file to base64 string.
+
+    Args:
+        file_path: Path to file (can be relative from project root)
+
+    Returns:
+        Base64-encoded string or None if file doesn't exist
+    """
+    if not file_path:
+        return None
+
+    try:
+        # Get project root
+        base_dir = Path(__file__).parent.parent
+
+        # Try to resolve path (handle both absolute and relative paths)
+        full_path = Path(file_path)
+        if not full_path.is_absolute():
+            full_path = base_dir / file_path
+
+        if not full_path.exists():
+            logger.warning(f"File not found: {full_path}")
+            return None
+
+        # Read and encode
+        with open(full_path, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
+
+    except Exception as e:
+        logger.error(f"Error encoding file {file_path}: {str(e)}")
+        return None
+
+
 # Pydantic Schemas
 class QueryRequest(BaseModel):
     """Request schema for chemistry query."""
@@ -39,8 +73,8 @@ class QueryResponse(BaseModel):
     success: bool
     thread_id: str
     text_response: Optional[str] = None
-    image_path: Optional[str] = None
-    audio_path: Optional[str] = None
+    image_base64: Optional[str] = None
+    audio_base64: Optional[str] = None
     error: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
@@ -145,12 +179,16 @@ async def query_chemistry(request: QueryRequest):
 
         logger.info(f"Query succeeded - thread_id: {thread_id}, rag_docs: {len(result.get('rag_context', []))}")
 
+        # Convert file paths to base64
+        image_base64 = file_to_base64(final_response.get("image_path"))
+        audio_base64 = file_to_base64(final_response.get("audio_path"))
+
         return QueryResponse(
             success=True,
             thread_id=thread_id,
             text_response=final_response.get("text_response", ""),
-            image_path=final_response.get("image_path"),
-            audio_path=final_response.get("audio_path"),
+            image_base64=image_base64,
+            audio_base64=audio_base64,
             metadata={
                 "rephrased_query": result.get("rephrased_query", ""),
                 "search_query": result.get("search_query", ""),
@@ -232,12 +270,16 @@ async def query_with_upload(
 
         logger.info(f"Query succeeded - thread_id: {thread_id}, rag_docs: {len(result.get('rag_context', []))}")
 
+        # Convert file paths to base64
+        image_base64 = file_to_base64(final_response.get("image_path"))
+        audio_base64 = file_to_base64(final_response.get("audio_path"))
+
         return QueryResponse(
             success=True,
             thread_id=thread_id,
             text_response=final_response.get("text_response", ""),
-            image_path=final_response.get("image_path"),
-            audio_path=final_response.get("audio_path"),
+            image_base64=image_base64,
+            audio_base64=audio_base64,
             metadata={
                 "rephrased_query": result.get("rephrased_query", ""),
                 "search_query": result.get("search_query", ""),

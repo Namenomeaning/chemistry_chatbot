@@ -1,12 +1,31 @@
 """Simple Gradio chatbot interface for Chemistry Chatbot."""
 
+import os
 import gradio as gr
 import requests
 from pathlib import Path
 
-# Configuration
-API_URL = "http://localhost:8000/query"
-API_URL_UPLOAD = "http://localhost:8000/query/upload"
+# Configuration - Auto-detect GitHub Codespaces or use environment variable
+def get_base_url():
+    """Get API base URL - auto-detect Codespaces or use localhost."""
+    # If explicitly set, use it
+    if os.getenv("API_BASE_URL"):
+        return os.getenv("API_BASE_URL")
+
+    # Auto-detect GitHub Codespaces
+    codespace_name = os.getenv("CODESPACE_NAME")
+    github_codespaces_port_forwarding_domain = os.getenv("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN")
+
+    if codespace_name and github_codespaces_port_forwarding_domain:
+        # Construct Codespaces URL for port 8000
+        return f"https://{codespace_name}-8000.{github_codespaces_port_forwarding_domain}"
+
+    # Default to localhost
+    return "http://localhost:8000"
+
+BASE_URL = get_base_url()
+API_URL = f"{BASE_URL}/query"
+API_URL_UPLOAD = f"{BASE_URL}/query/upload"
 PROJECT_ROOT = Path(__file__).parent.parent
 
 # Store thread_id globally for conversation context
@@ -75,15 +94,15 @@ def respond(message, history):
             # Format response text
             response_text = result["text_response"]
 
-            # Add image as markdown if available
-            if result.get("image_path"):
-                image_url = f"http://localhost:8000/files/{result['image_path']}"
-                response_text += f"\n\n![Cấu trúc phân tử]({image_url})"
+            # Add image as base64 data URI if available
+            if result.get("image_base64"):
+                image_data_uri = f"data:image/png;base64,{result['image_base64']}"
+                response_text += f"\n\n![Cấu trúc phân tử]({image_data_uri})"
 
-            # Add audio link if available
-            if result.get("audio_path"):
-                audio_url = f"http://localhost:8000/files/{result['audio_path']}"
-                response_text += f"\n\n🔊 [Nghe phát âm]({audio_url})"
+            # Add audio as base64 data URI if available
+            if result.get("audio_base64"):
+                audio_data_uri = f"data:audio/wav;base64,{result['audio_base64']}"
+                response_text += f"\n\n<audio controls src=\"{audio_data_uri}\">🔊 Nghe phát âm</audio>"
 
             return response_text
         else:
