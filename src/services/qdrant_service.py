@@ -5,7 +5,10 @@ from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient, models
 
+from ..core.logging import setup_logging
+
 load_dotenv(override=True)
+logger = setup_logging(__name__)
 
 
 class QdrantService:
@@ -45,6 +48,8 @@ class QdrantService:
         if threshold is None:
             threshold = self.score_threshold
 
+        logger.debug(f"Qdrant search - query: '{query[:50]}...', limit: {limit}, threshold: {threshold}")
+
         # Hybrid search with RRF fusion
         results = self.client.query_points(
             collection_name=self.collection_name,
@@ -74,11 +79,14 @@ class QdrantService:
         )
 
         # Extract payloads with scores, filter by threshold
-        return [
+        filtered_results = [
             {**point.payload, "score": point.score}
             for point in results.points
             if point.score >= threshold
         ]
+
+        logger.info(f"Qdrant search complete - found: {len(filtered_results)} docs (threshold: {threshold})")
+        return filtered_results
 
 
 # Global instance

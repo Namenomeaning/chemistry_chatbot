@@ -1,10 +1,17 @@
 """Generation node: Generate final response."""
 
+import os
 from typing import Dict, Any
 from langchain_core.messages import AIMessage
 from ..state import AgentState
 from ..schemas import FinalResponse
 from ...services import gemini_service
+from ...core.logging import setup_logging
+
+logger = setup_logging(__name__)
+
+# Get API base URL from environment
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
 
 def generate_response(state: AgentState) -> Dict[str, Any]:
@@ -56,7 +63,7 @@ Output:
         temperature=0.3  # Slightly higher for natural response
     )
 
-    # Extract URLs from selected document (respect LLM decisions)
+    # Construct URLs from file paths (respect LLM decisions)
     image_url = ""
     audio_url = ""
 
@@ -64,12 +71,14 @@ Output:
         # Find matching document
         for doc in rag_context:
             if doc.get("doc_id") == response.selected_doc_id:
-                # Only extract if LLM decided to return them
-                if response.should_return_image:
-                    image_url = doc.get("image_url", "")
-                if response.should_return_audio:
-                    audio_url = doc.get("audio_url", "")
+                # Construct URLs from paths using FastAPI /files/ endpoint
+                if response.should_return_image and doc.get("image_path"):
+                    image_url = f"{API_BASE_URL}/files/{doc['image_path']}"
+                if response.should_return_audio and doc.get("audio_path"):
+                    audio_url = f"{API_BASE_URL}/files/{doc['audio_path']}"
                 break
+
+    logger.info(f"Generate - selected_doc: '{response.selected_doc_id}', has_image: {bool(image_url)}, has_audio: {bool(audio_url)}")
 
     # Append assistant's response to conversation history
     return {

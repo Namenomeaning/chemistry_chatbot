@@ -22,12 +22,6 @@ sentence-transformers==5.1.2
 # BM25 for Hybrid Search
 rank-bm25==0.2.2
 
-# Database
-pymongo>=4.10.1
-
-# Object Storage
-minio==7.2.18
-
 # UI
 streamlit
 

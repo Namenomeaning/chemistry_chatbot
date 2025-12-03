@@ -2,9 +2,14 @@
 
 import os
 import sys
+from pathlib import Path
+
+# Add project root to path for direct script execution
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
 import base64
 from typing import Optional, Dict, Any
-from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,15 +17,12 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-# Add project root to path for direct script execution
-if __name__ == "__main__":
-    project_root = Path(__file__).parent.parent
-    sys.path.insert(0, str(project_root))
-
+from src.core.logging import setup_logging
 from src.agent.graph import graph
 from src.agent.state import AgentState
 
 load_dotenv(override=True)
+logger = setup_logging(__name__)
 
 
 # Pydantic Schemas
@@ -83,6 +85,8 @@ async def query_chemistry(request: QueryRequest):
         # Generate thread_id if not provided
         thread_id = request.thread_id or f"thread-{os.urandom(8).hex()}"
 
+        logger.info(f"Query received - thread_id: {thread_id}, has_text: {bool(request.text)}, has_image: {bool(request.image_base64)}")
+
         # Decode image if provided
         image_bytes = None
         if request.image_base64:
@@ -104,6 +108,7 @@ async def query_chemistry(request: QueryRequest):
         # Check for errors
         error_message = result.get("error_message")
         if error_message:
+            logger.warning(f"Query failed - thread_id: {thread_id}, error: {error_message}")
             return QueryResponse(
                 success=False,
                 thread_id=thread_id,
@@ -124,6 +129,8 @@ async def query_chemistry(request: QueryRequest):
                 error="No response generated"
             )
 
+        logger.info(f"Query succeeded - thread_id: {thread_id}, rag_docs: {len(result.get('rag_context', []))}")
+
         return QueryResponse(
             success=True,
             thread_id=thread_id,
@@ -140,6 +147,7 @@ async def query_chemistry(request: QueryRequest):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Query exception - thread_id: {thread_id if 'thread_id' in locals() else 'unknown'}, error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -204,6 +212,8 @@ async def query_with_upload(
                 error="No response generated"
             )
 
+        logger.info(f"Query succeeded - thread_id: {thread_id}, rag_docs: {len(result.get('rag_context', []))}")
+
         return QueryResponse(
             success=True,
             thread_id=thread_id,
@@ -220,6 +230,7 @@ async def query_with_upload(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Query exception - thread_id: {thread_id if 'thread_id' in locals() else 'unknown'}, error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -228,7 +239,7 @@ async def serve_file(file_path: str):
     """Serve static files (images, audio).
 
     Args:
-        file_path: Relative path (e.g., "src/data/images/ethanol.png")
+        file_path: Relative path (e.g., "data/images/ethanol.png")
 
     Returns:
         FileResponse

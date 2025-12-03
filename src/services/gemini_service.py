@@ -8,9 +8,12 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+from ..core.logging import setup_logging
+
 T = TypeVar('T', bound=BaseModel)
 
 load_dotenv(override=True)
+logger = setup_logging(__name__)
 
 
 class GeminiService:
@@ -171,14 +174,17 @@ class GeminiService:
         }
 
         # Generate response with structured output
-        response = self.client.models.generate_content(
-            model=model_name,
-            contents=content,
-            config=config
-        )
-
-        # Return parsed Pydantic model
-        return response.parsed
+        try:
+            logger.debug(f"Gemini API call - model: {model_name}, schema: {response_schema.__name__}")
+            response = self.client.models.generate_content(
+                model=model_name,
+                contents=content,
+                config=config
+            )
+            return response.parsed
+        except Exception as e:
+            logger.error(f"Gemini API error - model: {model_name}, schema: {response_schema.__name__}, error: {str(e)}")
+            raise
 
 
 # Global instance

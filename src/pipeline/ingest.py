@@ -9,8 +9,8 @@ from qdrant_client import QdrantClient, models
 
 load_dotenv(override=True)
 
-# Import MongoDB service
-from ..services.mongodb_service import mongodb_service
+# Import data service
+from ..services.data_service import get_data_service
 
 # Configuration
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
@@ -19,8 +19,9 @@ COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "chemistry_compounds")
 EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "Qwen/Qwen2.5-Embedding-0.6B")
 EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "896"))
 
-# Initialize Qdrant client
+# Initialize clients
 qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT, check_compatibility=False)
+data_service = get_data_service()
 
 def create_collection():
     """Create Qdrant collection with hybrid search configuration."""
@@ -50,10 +51,10 @@ def create_collection():
     print(f"Created collection '{COLLECTION_NAME}' with hybrid search enabled")
 
 def load_compound_documents() -> List[Dict]:
-    """Load all compound documents from MongoDB."""
-    print("Loading compounds from MongoDB...")
-    documents = mongodb_service.get_all_compounds()
-    print(f"Loaded {len(documents)} compound documents from MongoDB")
+    """Load all compound documents from TinyDB."""
+    print("Loading compounds from TinyDB...")
+    documents = data_service.get_all_compounds()
+    print(f"Loaded {len(documents)} compound documents")
     return documents
 
 def create_searchable_text(doc: Dict) -> str:

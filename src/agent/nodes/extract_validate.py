@@ -4,6 +4,9 @@ from typing import Dict, Any
 from ..state import AgentState
 from ..schemas import ExtractionResponse
 from ...services import gemini_service
+from ...core.logging import setup_logging
+
+logger = setup_logging(__name__)
 
 
 def extract_and_validate(state: AgentState) -> Dict[str, Any]:
@@ -56,6 +59,8 @@ Output:
         image=state.get("input_image"),
         temperature=0.1
     )
+
+    logger.info(f"Extract & Validate - input: '{query[:50]}...', valid: {response.is_valid}, search_query: '{response.search_query[:50]}...'")
 
     return {
         "search_query": response.search_query,

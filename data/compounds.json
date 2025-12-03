@@ -10,12 +10,10 @@
     "formula": "CH3COOH",
     "molecular_formula": "C2H4O2",
     "class": "Axit carboxylic (Carboxylic acid)",
-    "image_path": "src/data/images/acetic_acid.png",
-    "audio_path": "src/data/audio/acetic_acid.wav",
+    "image_path": "images/acetic_acid.png",
+    "audio_path": "audio/acetic_acid.wav",
     "info": "Ethanoic acid (acetic acid) là axit carboxylic yếu, chất lỏng không màu, có mùi chua đặc trưng. Giấm ăn chứa 3-5% acetic acid. Được sử dụng trong sản xuất thực phẩm, dược phẩm, và hóa chất.",
-    "naming_rule": "Tên hydrocarbon tương ứng (ethane) + hậu tố '-oic acid' → ethanoic acid. Tên thông thường: acetic acid",
-    "image_url": "http://localhost:9000/chemistry-images/acetic_acid.png",
-    "audio_url": "http://localhost:9000/chemistry-audio/acetic_acid.wav"
+    "naming_rule": "Tên hydrocarbon tương ứng (ethane) + hậu tố '-oic acid' → ethanoic acid. Tên thông thường: acetic acid"
   },
   {
     "doc_id": "ethanol",
@@ -29,12 +27,10 @@
     "formula": "C2H5OH",
     "molecular_formula": "C2H6O",
     "class": "Ancol (Alcohol)",
-    "image_path": "src/data/images/ethanol.png",
-    "audio_path": "src/data/audio/ethanol.wav",
+    "image_path": "images/ethanol.png",
+    "audio_path": "audio/ethanol.wav",
     "info": "Ethanol là ancol đơn chức bậc 1, chất lỏng không màu, tan vô hạn trong nước. Được sử dụng làm dung môi, nhiên liệu sinh học, và là thành phần chính trong đồ uống có cồn.",
-    "naming_rule": "Tên hydrocarbon tương ứng (ethane) + hậu tố '-ol' → ethanol",
-    "image_url": "http://localhost:9000/chemistry-images/ethanol.png",
-    "audio_url": "http://localhost:9000/chemistry-audio/ethanol.wav"
+    "naming_rule": "Tên hydrocarbon tương ứng (ethane) + hậu tố '-ol' → ethanol"
   },
   {
     "doc_id": "methane",
@@ -47,12 +43,10 @@
     "formula": "CH4",
     "molecular_formula": "CH4",
     "class": "Ankan (Alkane)",
-    "image_path": "src/data/images/methane.png",
-    "audio_path": "src/data/audio/methane.wav",
+    "image_path": "images/methane.png",
+    "audio_path": "audio/methane.wav",
     "info": "Methane là ankan đơn giản nhất, khí không màu, không mùi, nhẹ hơn không khí. Là thành phần chính của khí tự nhiên, được sử dụng làm nhiên liệu và nguyên liệu hóa học.",
-    "naming_rule": "Ankan có 1 carbon được gọi là methane (tiền tố 'meth-' + hậu tố '-ane')",
-    "image_url": "http://localhost:9000/chemistry-images/methane.png",
-    "audio_url": "http://localhost:9000/chemistry-audio/methane.wav"
+    "naming_rule": "Ankan có 1 carbon được gọi là methane (tiền tố 'meth-' + hậu tố '-ane')"
   },
   {
     "doc_id": "ethene",
@@ -64,12 +58,10 @@
     "formula": "C2H4",
     "molecular_formula": "C2H4",
     "class": "Anken (Alkene)",
-    "image_path": "src/data/images/ethene.png",
-    "audio_path": "src/data/audio/ethene.wav",
+    "image_path": "images/ethene.png",
+    "audio_path": "audio/ethene.wav",
     "info": "Ethene là anken đơn giản nhất, khí không màu, có liên kết đôi C=C. Được sử dụng để sản xuất polyethylene (nhựa PE), ethanol công nghiệp, và là hormone thực vật tự nhiên.",
-    "naming_rule": "Tên hydrocarbon có liên kết đôi: tiền tố số carbon + hậu tố '-ene' → ethene",
-    "image_url": "http://localhost:9000/chemistry-images/ethene.png",
-    "audio_url": "http://localhost:9000/chemistry-audio/ethene.wav"
+    "naming_rule": "Tên hydrocarbon có liên kết đôi: tiền tố số carbon + hậu tố '-ene' → ethene"
   },
   {
     "doc_id": "ethyne",
@@ -81,12 +73,10 @@
     "formula": "C2H2",
     "molecular_formula": "C2H2",
     "class": "Ankin (Alkyne)",
-    "image_path": "src/data/images/ethyne.png",
-    "audio_path": "src/data/audio/ethyne.wav",
+    "image_path": "images/ethyne.png",
+    "audio_path": "audio/ethyne.wav",
     "info": "Ethyne là ankin đơn giản nhất, khí không màu, có liên kết ba C≡C. Được sử dụng trong hàn cắt kim loại (ngọn lửa oxi-axetilen nhiệt độ cao ~3000°C) và tổng hợp hóa học.",
-    "naming_rule": "Tên hydrocarbon có liên kết ba: tiền tố số carbon + hậu tố '-yne' → ethyne",
-    "image_url": "http://localhost:9000/chemistry-images/ethyne.png",
-    "audio_url": "http://localhost:9000/chemistry-audio/ethyne.wav"
+    "naming_rule": "Tên hydrocarbon có liên kết ba: tiền tố số carbon + hậu tố '-yne' → ethyne"
   },
   {
     "doc_id": "ethyl_acetate",
@@ -98,11 +88,9 @@
     "formula": "CH3COOC2H5",
     "molecular_formula": "C4H8O2",
     "class": "Este (Ester)",
-    "image_path": "src/data/images/ethyl_acetate.png",
-    "audio_path": "src/data/audio/ethyl_acetate.wav",
+    "image_path": "images/ethyl_acetate.png",
+    "audio_path": "audio/ethyl_acetate.wav",
     "info": "Ethyl ethanoate (ethyl acetate) là este đơn giản, chất lỏng không màu, có mùi thơm dễ chịu. Được sử dụng làm dung môi trong sơn, keo dán, mỹ phẩm, và công nghiệp dược phẩm.",
-    "naming_rule": "Tên este: tên gốc alcohol (ethyl) + tên gốc acid với hậu tố '-oate' (ethanoate) → ethyl ethanoate",
-    "image_url": "http://localhost:9000/chemistry-images/ethyl_acetate.png",
-    "audio_url": "http://localhost:9000/chemistry-audio/ethyl_acetate.wav"
+    "naming_rule": "Tên este: tên gốc alcohol (ethyl) + tên gốc acid với hậu tố '-oate' (ethanoate) → ethyl ethanoate"
   }
 ]

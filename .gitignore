@@ -38,6 +38,9 @@ uv.lock
 # Qdrant storage
 qdrant_storage/
 
+# TinyDB database (generated from source JSON files)
+data/chemistry.json
+
 # IDE
 .vscode/
 .idea/
@@ -53,6 +56,9 @@ Thumbs.db
 .ipynb_checkpoints/
 *.ipynb
 
+# Generated audio files (keep directory structure)
+data/audio/*.wav
+data/audio/*.mp3
 
 # Logs
 *.log
@@ -64,6 +70,6 @@ logs/
 htmlcov/
 
 # Temporary data
-src/data/temp/
+data/temp/
 
 CLAUDE.md

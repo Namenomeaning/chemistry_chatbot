@@ -5,6 +5,9 @@ from langchain_core.messages import HumanMessage, AIMessage
 from ..state import AgentState
 from ..schemas import RephraseResponse
 from ...services import gemini_service
+from ...core.logging import setup_logging
+
+logger = setup_logging(__name__)
 
 
 def rephrase_query(state: AgentState) -> Dict[str, Any]:
@@ -26,6 +29,7 @@ def rephrase_query(state: AgentState) -> Dict[str, Any]:
     if not messages:
         # For image-only first turn, set placeholder text
         query_for_message = current_query if current_query else "(hình ảnh)"
+        logger.info(f"Rephrase (first turn) - query: '{query_for_message}'")
         return {
             "rephrased_query": query_for_message,
             "messages": [HumanMessage(content=query_for_message)]
@@ -61,6 +65,8 @@ Output:
         image=state.get("input_image"),
         temperature=0.1
     )
+
+    logger.info(f"Rephrase (follow-up) - original: '{current_query}', rephrased: '{response.rephrased_query}'")
 
     return {
         "rephrased_query": response.rephrased_query,

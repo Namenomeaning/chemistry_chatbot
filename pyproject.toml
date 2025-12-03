@@ -23,6 +23,7 @@ dependencies = [
     "rank-bm25>=0.2.2",
     "sentence-transformers>=5.1.2",
     "streamlit>=1.51.0",
+    "tinydb>=4.8.2",
     "uvicorn>=0.38.0",
 ]
 

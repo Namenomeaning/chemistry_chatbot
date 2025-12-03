@@ -2,6 +2,6 @@
 
 from .gemini_service import gemini_service
 from .qdrant_service import qdrant_service
-from .mongodb_service import mongodb_service
+from .data_service import get_data_service
 
-__all__ = ["gemini_service", "qdrant_service", "mongodb_service"]
+__all__ = ["gemini_service", "qdrant_service", "get_data_service"]
