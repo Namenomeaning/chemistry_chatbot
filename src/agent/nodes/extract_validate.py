@@ -74,12 +74,13 @@ Input: "Ethanol" → search_query: "Ethanol"
 Input: "C2H5OH" → search_query: "C2H5OH"
 """
 
-    # Call Gemini 2.5 Flash with structured output
+    # Call Gemini 2.5 Flash Lite (balanced for name normalization)
     response: ExtractionResponse = gemini_service.generate_structured(
         prompt=prompt,
         response_schema=ExtractionResponse,
         image=state.get("input_image"),
-        temperature=0.1
+        temperature=0.1,
+        model="gemini-2.5-flash-lite"
     )
 
     logger.info(f"Extract & Validate - input: '{query[:50]}...', valid: {response.is_valid}, search_query: '{response.search_query[:50]}...'")

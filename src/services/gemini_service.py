@@ -2,6 +2,7 @@
 
 import os
 import json
+import time
 from typing import Optional, Dict, Any, Type, TypeVar
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -132,9 +133,11 @@ class GeminiService:
         temperature: float = 0.1,
         model: Optional[str] = None,
         max_output_tokens: Optional[int] = None,
-        top_p: Optional[float] = None
+        top_p: Optional[float] = None,
+        max_retries: int = 3,
+        retry_delay: int = 10
     ) -> T:
-        """Generate structured response using Pydantic schema.
+        """Generate structured response using Pydantic schema with retry on overload.
 
         Args:
             prompt: Text prompt for the model
@@ -144,6 +147,8 @@ class GeminiService:
             model: Optional model override
             max_output_tokens: Maximum tokens (default from env/1024)
             top_p: Nucleus sampling (default from env/0.95)
+            max_retries: Maximum retry attempts (default 3)
+            retry_delay: Delay in seconds between retries (default 10)
 
         Returns:
             Instantiated Pydantic model with parsed response
@@ -173,18 +178,44 @@ class GeminiService:
             "top_p": top_p or self.top_p
         }
 
-        # Generate response with structured output
-        try:
-            logger.debug(f"Gemini API call - model: {model_name}, schema: {response_schema.__name__}")
-            response = self.client.models.generate_content(
-                model=model_name,
-                contents=content,
-                config=config
-            )
-            return response.parsed
-        except Exception as e:
-            logger.error(f"Gemini API error - model: {model_name}, schema: {response_schema.__name__}, error: {str(e)}", exc_info=True)
-            raise
+        # Retry loop for handling overload
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                logger.debug(f"Gemini API call (attempt {attempt + 1}/{max_retries}) - model: {model_name}, schema: {response_schema.__name__}")
+                response = self.client.models.generate_content(
+                    model=model_name,
+                    contents=content,
+                    config=config
+                )
+                return response.parsed
+            except Exception as e:
+                last_error = e
+                error_message = str(e).lower()
+
+                # Check if it's an overload/rate limit error
+                is_overload = any(keyword in error_message for keyword in [
+                    'resource exhausted',
+                    'overload',
+                    'rate limit',
+                    '429',
+                    '503',
+                    'too many requests',
+                    'quota exceeded'
+                ])
+
+                if is_overload and attempt < max_retries - 1:
+                    # Retry after delay
+                    logger.warning(f"Gemini API overload (attempt {attempt + 1}/{max_retries}) - retrying after {retry_delay}s - error: {str(e)}")
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    # Not overload error or final attempt - raise immediately
+                    logger.error(f"Gemini API error (attempt {attempt + 1}/{max_retries}) - model: {model_name}, schema: {response_schema.__name__}, error: {str(e)}", exc_info=True)
+                    raise
+
+        # Should not reach here, but just in case
+        raise last_error
 
 
 # Global instance

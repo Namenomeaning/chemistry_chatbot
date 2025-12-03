@@ -58,12 +58,13 @@ Output:
 - rephrased_query: Câu hỏi độc lập (thay đại từ nếu có, giữ nguyên nếu đã rõ)
 """
 
-    # Call Gemini 2.5 Flash Lite
+    # Call Gemini 2.0 Flash (cheapest for simple task)
     response: RephraseResponse = gemini_service.generate_structured(
         prompt=prompt,
         response_schema=RephraseResponse,
         image=state.get("input_image"),
-        temperature=0.1
+        temperature=0.1,
+        model="gemini-2.0-flash"
     )
 
     logger.info(f"Rephrase (follow-up) - original: '{current_query}', rephrased: '{response.rephrased_query}'")

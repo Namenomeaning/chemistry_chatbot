@@ -9,6 +9,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 import base64
+import requests
 from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any
 
@@ -26,17 +27,21 @@ load_dotenv(override=True)
 logger = setup_logging(__name__)
 
 
-def file_to_base64(file_path: Optional[str]) -> Optional[str]:
-    """Convert file to base64 string.
+def file_or_url_to_base64(file_path: Optional[str]) -> Optional[str]:
+    """Convert file to base64 or return URL directly.
 
     Args:
-        file_path: Path to file (can be relative from project root)
+        file_path: Path to file (local or URL)
 
     Returns:
-        Base64-encoded string or None if file doesn't exist
+        Base64-encoded string for local files, or URL string for remote URLs
     """
     if not file_path:
         return None
+
+    # If it's a URL, return it directly (no need to encode)
+    if file_path.startswith(("http://", "https://")):
+        return file_path
 
     try:
         # Get project root
@@ -47,11 +52,15 @@ def file_to_base64(file_path: Optional[str]) -> Optional[str]:
         if not full_path.is_absolute():
             full_path = base_dir / file_path
 
+        # If file doesn't exist, try with data/ prefix
         if not full_path.exists():
-            logger.warning(f"File not found: {full_path}")
+            full_path = base_dir / "data" / file_path
+
+        if not full_path.exists():
+            logger.warning(f"File not found: {file_path}")
             return None
 
-        # Read and encode
+        # Read and encode local file
         with open(full_path, "rb") as f:
             return base64.b64encode(f.read()).decode("utf-8")
 
@@ -179,9 +188,9 @@ async def query_chemistry(request: QueryRequest):
 
         logger.info(f"Query succeeded - thread_id: {thread_id}, rag_docs: {len(result.get('rag_context', []))}")
 
-        # Convert file paths to base64
-        image_base64 = file_to_base64(final_response.get("image_path"))
-        audio_base64 = file_to_base64(final_response.get("audio_path"))
+        # Convert file paths to base64 or keep URLs as-is
+        image_base64 = file_or_url_to_base64(final_response.get("image_path"))
+        audio_base64 = file_or_url_to_base64(final_response.get("audio_path"))
 
         return QueryResponse(
             success=True,
@@ -270,9 +279,9 @@ async def query_with_upload(
 
         logger.info(f"Query succeeded - thread_id: {thread_id}, rag_docs: {len(result.get('rag_context', []))}")
 
-        # Convert file paths to base64
-        image_base64 = file_to_base64(final_response.get("image_path"))
-        audio_base64 = file_to_base64(final_response.get("audio_path"))
+        # Convert file paths to base64 or keep URLs as-is
+        image_base64 = file_or_url_to_base64(final_response.get("image_path"))
+        audio_base64 = file_or_url_to_base64(final_response.get("audio_path"))
 
         return QueryResponse(
             success=True,

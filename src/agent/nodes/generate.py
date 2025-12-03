@@ -62,16 +62,27 @@ Nếu KHÔNG tìm thấy → "Xin lỗi, không tìm thấy thông tin về ch�
 Output:
 - text_response: Thông tin cơ bản chính xác (markdown), LUÔN dùng tên IUPAC quốc tế
 - selected_doc_id: ID từ kết quả tìm kiếm (null nếu không tìm thấy)
-- should_return_image: true nếu hỏi về cấu trúc/công thức/tổng quan
-- should_return_audio: true nếu hỏi về phát âm/tên gọi/tổng quan
+- should_return_image: true NẾU người dùng hỏi về:
+  + Cấu trúc/công thức phân tử
+  + Thông tin tổng quan/chi tiết/đầy đủ
+  + "Cho tôi/hãy cho/cung cấp (tất cả) thông tin"
+  + Hoặc KHÔNG NÓI RÕ chỉ hỏi về tính chất cụ thể
+  Chỉ false nếu hỏi CỤ THỂ về: ứng dụng, tính chất hóa học, phản ứng (KHÔNG YÊU CẦU CẤU TRÚC)
+
+- should_return_audio: true NẾU người dùng hỏi về:
+  + Phát âm/cách đọc tên
+  + Thông tin tổng quan/chi tiết/đầy đủ
+  + "Cho tôi/hãy cho/cung cấp (tất cả) thông tin"
+  Chỉ false nếu hỏi CỤ THỂ về: cấu trúc, công thức, tính chất (KHÔNG YÊU CẦU PHÁT ÂM)
 """
 
-        # Call Gemini 2.5 Flash with structured output
+        # Call Gemini 2.5 Flash (best quality for final answer generation)
         logger.info("Generate - calling Gemini API with FinalResponse schema")
         response: FinalResponse = gemini_service.generate_structured(
             prompt=prompt,
             response_schema=FinalResponse,
-            temperature=0.3
+            temperature=0.3,
+            model="gemini-2.5-flash"
         )
         logger.info("Generate - Gemini API call succeeded")
 

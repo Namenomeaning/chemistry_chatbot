@@ -52,17 +52,25 @@ Hãy kiểm tra câu hỏi có liên quan Hóa học lớp 11 không.
 
 Input: {query}
 
+Câu hỏi liên quan Hóa học bao gồm:
+- Nguyên tố/hợp chất (tên, ký hiệu, công thức)
+- Phát âm tên Hóa học (VD: "cách phát âm của sắt", "sodium đọc như thế nào")
+- Tính chất, phản ứng, ứng dụng
+- Công thức cấu tạo, phân tử
+- Bất kỳ câu hỏi nào về chất Hóa học
+
 Output:
-- is_chemistry_related: true nếu về hợp chất/phản ứng/công thức/tính chất, false nếu không
+- is_chemistry_related: true nếu liên quan Hóa học, false nếu không
 - error_message: Thông báo nếu false, null nếu true
 """
 
-    # Call Gemini 2.5 Flash Lite (simple binary classification)
+    # Call Gemini 2.0 Flash (cheapest for simple binary classification)
     response: RelevanceResponse = gemini_service.generate_structured(
         prompt=prompt,
         response_schema=RelevanceResponse,
         image=state.get("input_image"),
-        temperature=0.1
+        temperature=0.1,
+        model="gemini-2.0-flash"
     )
 
     return {
