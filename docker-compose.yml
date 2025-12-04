@@ -1,21 +1,80 @@
+# CHEMI - Chemistry Chatbot Docker Compose
+# Run: docker compose up -d
+
 services:
-  qdrant:
-    image: qdrant/qdrant:v1.15.0
-    container_name: chemistry_qdrant
+  # FastAPI Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chemi-backend
     ports:
-      - "6333:6333"
-      - "6334:6334"
+      - "8000:8000"
+    env_file:
+      - .env
     volumes:
-      - ./qdrant_storage:/qdrant/storage
-    environment:
-      - QDRANT__SERVICE__GRPC_PORT=6334
+      - ./data:/app/data:ro  # Read-only data volume
     restart: unless-stopped
     networks:
-      - chemistry_network
+      - chemi-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    # depends_on:
+    #   - qdrant  # Uncomment when using Qdrant
+
+  # Gradio Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chemi-frontend
+    ports:
+      - "7860:7860"
+    environment:
+      - API_BASE_URL=http://backend:8000
+    env_file:
+      - .env
+    command: ["uv", "run", "python", "gradio/app.py"]
+    restart: unless-stopped
+    networks:
+      - chemi-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # Qdrant Vector Database (uncomment when needed)
+  # qdrant:
+  #   image: qdrant/qdrant:v1.15.0
+  #   container_name: chemi-qdrant
+  #   ports:
+  #     - "6333:6333"
+  #     - "6334:6334"
+  #   volumes:
+  #     - qdrant_storage:/qdrant/storage
+  #   environment:
+  #     - QDRANT__SERVICE__GRPC_PORT=6334
+  #   restart: unless-stopped
+  #   networks:
+  #     - chemi-network
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
 
 networks:
-  chemistry_network:
+  chemi-network:
     driver: bridge
 
-volumes:
-  qdrant_storage:
+# volumes:
+#   qdrant_storage:  # Uncomment when using Qdrant

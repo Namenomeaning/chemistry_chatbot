@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project specific
+.env
+.env.*
+!.env.example
+*.md
+!README.md
+.claude/
+.devcontainer/
+.github/
+.gradio/
+qdrant_storage/
+tests/
+scripts/
+models/
+
+# Temp files
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
