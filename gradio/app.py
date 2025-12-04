@@ -130,22 +130,8 @@ audio {
 }
 """
 
-# Configuration - Auto-detect GitHub Codespaces or use environment variable
-def get_base_url():
-    """Get API base URL - auto-detect Codespaces or use localhost."""
-    if os.getenv("API_BASE_URL"):
-        return os.getenv("API_BASE_URL")
 
-    # Auto-detect GitHub Codespaces
-    codespace_name = os.getenv("CODESPACE_NAME")
-    github_codespaces_port_forwarding_domain = os.getenv("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN")
-
-    if codespace_name and github_codespaces_port_forwarding_domain:
-        return f"https://{codespace_name}-8000.{github_codespaces_port_forwarding_domain}"
-
-    return "http://localhost:8000"
-
-BASE_URL = get_base_url()
+BASE_URL = "http://localhost:8000"
 API_URL = f"{BASE_URL}/query"
 API_URL_UPLOAD = f"{BASE_URL}/query/upload"
 
