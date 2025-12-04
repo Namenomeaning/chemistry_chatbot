@@ -1,6 +1,5 @@
 """LangGraph workflow for chemistry chatbot."""
 
-from typing import Literal
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -22,17 +21,15 @@ def build_graph():
     Workflow:
         START → rephrase_query (handle "nó", "chất đó" with conversation context)
               → check_relevance (chemistry-related?)
-                  ├─ if chemistry-related → extract_and_validate (expand keywords + validate)
-                  │                       → retrieve_from_rag (ALWAYS - hybrid search handles typos)
-                  │                       → generate_response (RAG for ID + LLM knowledge for answer)
-                  │                       → END
+                  ├─ if chemistry-related → extract_and_validate (expand keywords + classify needs_rag)
+                  │                           ├─ if needs_rag=True → retrieve_from_rag → generate_response → END
+                  │                           └─ if needs_rag=False → generate_response (LLM direct) → END
                   └─ if not chemistry-related → END (with error message)
 
     Key Features:
     - Conversational: Uses conversation history to resolve pronouns ("nó" → "Hidro")
-    - Flexible: Always proceeds to RAG retrieval (fuzzy search handles typos/variations)
-    - Knowledge-based: Uses RAG to identify compound, LLM knowledge to answer questions
-    - Minimal database: Only stores name, formula, type, image/audio paths (118 elements + 7 compounds)
+    - Smart routing: RAG for specific compound queries, LLM direct for general knowledge
+    - Knowledge-based: Uses RAG to identify compound + get image/audio, LLM for answers
 
     Returns:
         Compiled graph with MemorySaver checkpointer for conversation history
@@ -68,7 +65,7 @@ def build_graph():
         check_validity_route,
         {
             "retrieve": "retrieve_from_rag",
-            "end": END
+            "generate": "generate_response"  # Skip RAG for general knowledge queries
         }
     )
 

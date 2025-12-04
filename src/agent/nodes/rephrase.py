@@ -22,14 +22,35 @@ def rephrase_query(state: AgentState) -> Dict[str, Any]:
     Returns:
         Updated state with rephrased_query and updated messages
     """
-    current_query = state.get("input_text") or ""
+    import json
+    import re
+
+    current_query_raw = state.get("input_text") or ""
     messages = state.get("messages", [])
+
+    # Clean up input_text if it's in dict/list string format
+    current_query = current_query_raw
+    if current_query_raw.startswith("[{"):
+        # Try to parse as JSON list
+        try:
+            parsed = json.loads(current_query_raw)
+            if isinstance(parsed, list) and len(parsed) > 0 and isinstance(parsed[0], dict):
+                current_query = parsed[0].get("text", "")
+                # Remove markdown image syntax
+                current_query = re.sub(r'!\[.*?\]\(.*?\)', '', current_query).strip()
+        except:
+            pass
+    else:
+        # Remove base64 image data from plain text
+        current_query = re.sub(r'!\[.*?\]\(data:[^)]+\)', '[IMAGE]', current_query_raw).strip()
 
     # First turn - no context needed
     if not messages:
         # For image-only first turn, set placeholder text
         query_for_message = current_query if current_query else "(hình ảnh)"
-        logger.info(f"Rephrase (first turn) - query: '{query_for_message}'")
+        # Log without base64 data
+        log_text = re.sub(r'data:[^)]+', '[BASE64_DATA]', current_query[:100])
+        logger.info(f"Rephrase (first turn) - query: '{log_text}'")
         return {
             "rephrased_query": query_for_message,
             "messages": [HumanMessage(content=query_for_message)]
@@ -46,16 +67,30 @@ def rephrase_query(state: AgentState) -> Dict[str, Any]:
         elif isinstance(msg, AIMessage):
             prev_answer = msg.content
 
-    prompt = f"""Bạn là chuyên gia xử lý ngữ cảnh hội thoại.
+    # Truncate prev_answer to extract key info (first 300 chars)
+    prev_answer_short = prev_answer[:300] if prev_answer else ""
 
-Hãy chuyển câu hỏi thành dạng độc lập bằng cách thay đại từ với tên cụ thể từ lịch sử.
+    prompt = f"""Bạn là chuyên gia xử lý ngữ cảnh hội thoại Hóa học.
+
+NHIỆM VỤ: Thay đại từ "nó", "chất đó", "cái này" bằng TÊN HỢP CHẤT/NGUYÊN TỐ từ câu hỏi trước.
 
 Input:
-- Hiện tại: {current_query if current_query else "(hình ảnh)"}
-- Trước: Q: {prev_question} | A: {prev_answer}
+- Câu hỏi hiện tại: {current_query if current_query else "(hình ảnh)"}
+- Câu hỏi trước: {prev_question}
+- Câu trả lời trước (trích): {prev_answer_short}
+
+QUY TẮC:
+1. "nó", "chất đó", "nguyên tố đó" → thay bằng TÊN HỢP CHẤT/NGUYÊN TỐ (KHÔNG phải CHEMI - đó là tên chatbot)
+2. Nếu câu hỏi đã rõ ràng → giữ nguyên
+3. Nếu hỏi về hình ảnh → giữ nguyên
+
+VÍ DỤ:
+- Q trước: "Methane là gì?" → "nó có ứng dụng gì?" → "Methane có ứng dụng gì?"
+- Q trước: "Ethanol" → "công thức của nó?" → "công thức của Ethanol?"
+- Q trước: "Natri là gì?" → "nó có tính chất gì?" → "Sodium có tính chất gì?"
 
 Output:
-- rephrased_query: Câu hỏi độc lập (thay đại từ nếu có, giữ nguyên nếu đã rõ)
+- rephrased_query: Câu hỏi độc lập (đã thay thế đại từ)
 """
 
     # Call Gemini 2.0 Flash (cheapest for simple task)
@@ -67,7 +102,9 @@ Output:
         model="gemini-2.0-flash"
     )
 
-    logger.info(f"Rephrase (follow-up) - original: '{current_query}', rephrased: '{response.rephrased_query}'")
+    # Log without base64 data
+    log_query = re.sub(r'data:[^)]+', '[BASE64]', current_query[:80])
+    logger.info(f"Rephrase (follow-up) - query: '{log_query}', rephrased: '{response.rephrased_query}'")
 
     return {
         "rephrased_query": response.rephrased_query,

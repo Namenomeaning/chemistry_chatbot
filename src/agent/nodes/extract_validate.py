@@ -38,40 +38,51 @@ Output:
 - search_query: CHỈ tên IUPAC (VD: "Ethanol", "Methane")
 - is_valid: true nếu nhận dạng được
 - error_message: null hoặc lỗi
+- needs_rag: true (luôn true cho image query vì cần tra cứu thông tin chi tiết)
 """
     else:
-        prompt = f"""Bạn là chuyên gia chuẩn hóa tên hóa chất.
+        prompt = f"""Bạn là chuyên gia chuẩn hóa truy vấn Hóa học.
 
 Input: {query}
 
-Nhiệm vụ: Chuẩn hóa thành TÊN IUPAC hoặc CÔNG THỨC để search.
+NHIỆM VỤ 1 - PHÂN LOẠI needs_rag:
+
+needs_rag = TRUE nếu hỏi về MỘT CHẤT CỤ THỂ và cần:
+  + Hình ảnh cấu trúc phân tử
+  + Audio phát âm tên
+  + Thông tin chi tiết từ CSDL
+  VD: "Ethanol là gì?", "CH4", "Cấu trúc của methane", "Natri"
+
+needs_rag = FALSE nếu là KIẾN THỨC TỔNG QUÁT:
+  + Danh sách/nhóm chất: "các halogen", "nhóm 7A", "danh sách ankan C1-C6"
+  + Tính chất chung: "tính chất của kim loại kiềm", "đặc điểm của ancol"
+  + So sánh: "so sánh alkane và alkene"
+  + Quy tắc gọi tên: "cách đặt tên IUPAC", "quy tắc danh pháp"
+  + Câu hỏi lý thuyết: "liên kết hóa học là gì", "phản ứng cộng là gì"
+
+NHIỆM VỤ 2 - CHUẨN HÓA (chỉ khi needs_rag = TRUE):
 
 Quy tắc chuẩn hóa:
 1. Tên tiếng Việt → Tên IUPAC:
-   - "Natri" → "Sodium"
-   - "Hydro" → "Hydrogen"
-   - "Metan" → "Methane"
-   - "Rượu" hoặc "Cồn" → "Ethanol"
+   - "Natri" → "Sodium", "Hydro" → "Hydrogen"
+   - "Metan" → "Methane", "Rượu/Cồn" → "Ethanol"
 
-2. Công thức → Giữ nguyên công thức:
-   - "CH4" → "CH4"
-   - "C2H5OH" → "C2H5OH"
-   - "Na" → "Na"
+2. Công thức → Giữ nguyên: "CH4" → "CH4", "Na" → "Na"
 
-3. Tên IUPAC → Giữ nguyên:
-   - "Ethanol" → "Ethanol"
-   - "Sodium" → "Sodium"
+3. Tên IUPAC → Giữ nguyên: "Ethanol" → "Ethanol"
 
 Output:
-- search_query: Tên IUPAC HOẶC công thức (CHỈ MỘT TRONG HAI, không kết hợp)
-- is_valid: true nếu nhận dạng được
-- error_message: null hoặc lỗi
+- needs_rag: true/false (QUAN TRỌNG - xác định trước)
+- search_query: Tên IUPAC hoặc công thức (nếu needs_rag=true), hoặc "" (nếu needs_rag=false)
+- is_valid: true
+- error_message: null
 
 VÍ DỤ:
-Input: "Natri là gì?" → search_query: "Sodium"
-Input: "CH4" → search_query: "CH4"
-Input: "Ethanol" → search_query: "Ethanol"
-Input: "C2H5OH" → search_query: "C2H5OH"
+"Natri là gì?" → needs_rag: true, search_query: "Sodium"
+"CH4" → needs_rag: true, search_query: "CH4"
+"Danh sách nhóm 7A" → needs_rag: false, search_query: ""
+"Tính chất của halogen" → needs_rag: false, search_query: ""
+"So sánh alkane và alkene" → needs_rag: false, search_query: ""
 """
 
     # Call Gemini 2.5 Flash Lite (balanced for name normalization)
@@ -83,10 +94,11 @@ Input: "C2H5OH" → search_query: "C2H5OH"
         model="gemini-2.5-flash-lite"
     )
 
-    logger.info(f"Extract & Validate - input: '{query[:50]}...', valid: {response.is_valid}, search_query: '{response.search_query[:50]}...'")
+    logger.info(f"Extract & Validate - input: '{query[:50]}...', needs_rag: {response.needs_rag}, search_query: '{response.search_query[:50] if response.search_query else ''}'")
 
     return {
         "search_query": response.search_query,
         "is_valid": response.is_valid,
-        "error_message": response.error_message if not response.is_valid else None
+        "error_message": response.error_message if not response.is_valid else None,
+        "needs_rag": response.needs_rag
     }

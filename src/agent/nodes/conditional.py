@@ -18,16 +18,21 @@ def check_relevance_route(state: AgentState) -> str:
 
 
 def check_validity_route(state: AgentState) -> str:
-    """Route after extraction node based on validity.
+    """Route after extraction node based on needs_rag.
 
     Args:
         state: Current agent state
 
     Returns:
-        "retrieve" always - let RAG fuzzy search handle invalid/typo cases
+        "retrieve" if needs RAG lookup (specific compound query)
+        "generate" if general knowledge query (skip RAG)
     """
-    # Always proceed to retrieve - hybrid search can handle:
-    # - Typos (fuzzy matching via dense vectors)
-    # - Alternative formulas (BM25 sparse matching)
-    # - Invalid names (LLM will explain in final response)
-    return "retrieve"
+    # Check if RAG retrieval is needed
+    needs_rag = state.get("needs_rag", True)
+
+    if needs_rag:
+        # Specific compound query - need RAG for image/audio/detailed info
+        return "retrieve"
+    else:
+        # General knowledge query - LLM answers directly (skip RAG)
+        return "generate"

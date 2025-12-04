@@ -27,6 +27,7 @@ class AgentState(TypedDict):
     # Extraction node output (keyword expansion + validation)
     search_query: str
     is_valid: bool
+    needs_rag: bool  # True = need RAG lookup, False = general knowledge (LLM answers directly)
 
     # Retrieval node output
     rag_context: List[Dict[str, Any]]

@@ -188,6 +188,21 @@ class GeminiService:
                     contents=content,
                     config=config
                 )
+
+                # Debug logging - check if response or response.parsed is None
+                if response is None:
+                    logger.error(f"Gemini API returned None response - model: {model_name}, schema: {response_schema.__name__}")
+                    return None
+
+                if response.parsed is None:
+                    logger.error(f"Gemini API returned None for parsed response - model: {model_name}, schema: {response_schema.__name__}")
+                    # Safely access response.text
+                    try:
+                        raw_text = response.text if response.text else 'NO TEXT'
+                        logger.error(f"Raw response text: {raw_text[:500]}")
+                    except Exception as text_error:
+                        logger.error(f"Could not access response.text: {text_error}")
+
                 return response.parsed
             except Exception as e:
                 last_error = e

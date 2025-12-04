@@ -20,6 +20,10 @@ class ExtractionResponse(BaseModel):
     search_query: str = Field(description="Optimized search query (expanded with keywords)")
     is_valid: bool = Field(description="Whether the formula/name is valid")
     error_message: Optional[str] = Field(default=None, description="Error message with suggestion if invalid")
+    needs_rag: bool = Field(
+        default=True,
+        description="True nếu cần tra cứu RAG (hỏi về 1 chất cụ thể). False nếu là general knowledge (danh sách, tính chất chung)"
+    )
 
 
 class FinalResponse(BaseModel):
