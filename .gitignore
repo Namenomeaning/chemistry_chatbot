@@ -90,3 +90,7 @@ qdrant_storage
 models
 
 .env
+# AWS credentials
+*.csv
+access_key*.csv
+*accessKeys*.csv
