@@ -55,115 +55,122 @@ def _upload_to_s3(filepath: Path, s3_key: str) -> str | None:
         return None
 
 
-@tool
-def generate_isomers(smiles: str) -> str:
-    """Tạo danh sách đồng phân lập thể và ảnh cấu trúc từ SMILES.
-
-    Args:
-        smiles: Cấu trúc SMILES của hợp chất (VD: "CC=CC", "CC(O)CC")
-
-    Returns:
-        JSON chứa danh sách đồng phân với SMILES, loại lập thể và image_path
-
-    Example:
-        generate_isomers("CC=CC") → E/Z isomers của but-2-ene + ảnh grid
-    """
-    mol = Chem.MolFromSmiles(smiles)
-    if mol is None:
-        return json.dumps({"error": f"SMILES không hợp lệ: '{smiles}'"}, ensure_ascii=False)
-
-    # Get formula and canonical SMILES
-    formula = rdMolDescriptors.CalcMolFormula(Chem.AddHs(mol))
-    canonical_smiles = Chem.MolToSmiles(mol, canonical=True)
-
-    # Make SMILES filename-safe: = → e, / → f, \ → b, ( → o, ) → c, @ → a, # → t
-    safe_smiles = (canonical_smiles
+def _make_safe_smiles(smiles: str) -> str:
+    """Convert SMILES to filename-safe string."""
+    return (smiles
         .replace('=', 'e').replace('/', 'f').replace('\\', 'b')
         .replace('(', 'o').replace(')', 'c').replace('@', 'a').replace('#', 't'))
 
-    # Unique filename: formula + safe_smiles
-    filename = f"{formula.lower()}_{safe_smiles}.png"
+
+def _get_stereo_info(mol) -> str:
+    """Get stereo type string for a molecule."""
+    stereo_info = []
+    chiral = Chem.FindMolChiralCenters(mol, includeUnassigned=False)
+    if chiral:
+        stereo_info.append(f"chiral: {chiral}")
+    for bond in mol.GetBonds():
+        if bond.GetBondType() == Chem.BondType.DOUBLE:
+            s = bond.GetStereo()
+            if s in {Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ}:
+                stereo_info.append(s.name)
+    return ", ".join(stereo_info) or "unspecified"
+
+
+@tool
+def generate_isomers(smiles_list: list[str]) -> str:
+    """Tạo ảnh grid chứa tất cả đồng phân từ danh sách SMILES.
+
+    Args:
+        smiles_list: Danh sách SMILES (VD: ["CCCC", "CC(C)C"] cho C4H10)
+
+    Returns:
+        JSON chứa danh sách compounds với đồng phân lập thể và image_path
+
+    Example:
+        generate_isomers(["CCCC", "CC(C)C"]) → ảnh grid của n-butane và isobutane
+        generate_isomers(["CC=CC"]) → ảnh grid E/Z isomers của but-2-ene
+    """
+    if not smiles_list:
+        return json.dumps({"error": "Danh sách SMILES rỗng"}, ensure_ascii=False)
+
+    # Validate and canonicalize all SMILES
+    canonical_list = []
+    for smiles in smiles_list:
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is None:
+            return json.dumps({"error": f"SMILES không hợp lệ: '{smiles}'"}, ensure_ascii=False)
+        canonical_list.append(Chem.MolToSmiles(mol, canonical=True))
+
+    # Sort for consistent cache key, join safe SMILES
+    canonical_list.sort()
+    safe_names = [_make_safe_smiles(s) for s in canonical_list]
+    filename = f"isomers_{'_'.join(safe_names)}.png"
     s3_key = f"isomers/{filename}"
     s3_url = f"{_S3_BASE_URL}/{s3_key}"
 
-    # Check if already exists in S3 (cache hit)
-    if _s3_file_exists(s3_key):
-        logger.info(f"S3 cache hit: {s3_url}")
-        # Still need to enumerate isomers for the response data
-        opts = StereoEnumerationOptions(tryEmbedding=True, unique=True, maxIsomers=16)
+    # Process all molecules
+    all_compounds = []
+    all_mols = []
+    all_legends = []
+    opts = StereoEnumerationOptions(tryEmbedding=True, unique=True, maxIsomers=16)
+
+    for smiles in smiles_list:
+        mol = Chem.MolFromSmiles(smiles)
+        formula = rdMolDescriptors.CalcMolFormula(Chem.AddHs(mol))
+        canonical = Chem.MolToSmiles(mol, canonical=True)
+
         isomers = []
         for iso_mol in EnumerateStereoisomers(mol, options=opts):
             iso_smiles = Chem.MolToSmiles(iso_mol, isomericSmiles=True)
-            chiral = Chem.FindMolChiralCenters(iso_mol, includeUnassigned=False)
-            stereo_info = []
-            if chiral:
-                stereo_info.append(f"chiral: {chiral}")
-            for bond in iso_mol.GetBonds():
-                if bond.GetBondType() == Chem.BondType.DOUBLE:
-                    s = bond.GetStereo()
-                    if s in {Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ}:
-                        stereo_info.append(s.name)
-            stereo_type = ", ".join(stereo_info) or "unspecified"
+            stereo_type = _get_stereo_info(iso_mol)
             isomers.append({"smiles": iso_smiles, "stereo_type": stereo_type})
 
-        return json.dumps({
+            AllChem.Compute2DCoords(iso_mol)
+            all_mols.append(iso_mol)
+            # Only show stereo type if specified (E/Z, R/S)
+            if stereo_type != "unspecified":
+                all_legends.append(f"{canonical}\n({stereo_type})")
+            else:
+                all_legends.append(canonical)
+
+        all_compounds.append({
+            "input_smiles": smiles,
+            "canonical_smiles": canonical,
             "formula": formula,
-            "total": len(isomers),
-            "isomers": isomers,
+            "stereoisomers": isomers,
+        })
+
+    # Check S3 cache
+    if _s3_file_exists(s3_key):
+        logger.info(f"S3 cache hit: {s3_url}")
+        return json.dumps({
+            "total_compounds": len(all_compounds),
+            "total_stereoisomers": len(all_mols),
+            "compounds": all_compounds,
             "image_path": s3_url,
         }, ensure_ascii=False, indent=2)
 
-    # Cache miss - generate image
-    opts = StereoEnumerationOptions(tryEmbedding=True, unique=True, maxIsomers=16)
-    isomers = []
-    mols = []
-    legends = []
-
-    for iso_mol in EnumerateStereoisomers(mol, options=opts):
-        iso_smiles = Chem.MolToSmiles(iso_mol, isomericSmiles=True)
-
-        # Determine stereo type
-        chiral = Chem.FindMolChiralCenters(iso_mol, includeUnassigned=False)
-        stereo_info = []
-        if chiral:
-            stereo_info.append(f"chiral: {chiral}")
-        for bond in iso_mol.GetBonds():
-            if bond.GetBondType() == Chem.BondType.DOUBLE:
-                s = bond.GetStereo()
-                if s in {Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ}:
-                    stereo_info.append(s.name)
-
-        stereo_type = ", ".join(stereo_info) or "unspecified"
-        isomers.append({"smiles": iso_smiles, "stereo_type": stereo_type})
-
-        AllChem.Compute2DCoords(iso_mol)
-        mols.append(iso_mol)
-        legends.append(stereo_type)
-
-    # Generate grid image and upload to S3
+    # Generate grid image
     image_path = None
-    if mols:
+    if all_mols:
         filepath = _IMAGE_DIR / filename
-
         img = Draw.MolsToGridImage(
-            mols,
-            molsPerRow=min(len(mols), 4),
+            all_mols,
+            molsPerRow=min(len(all_mols), 4),
             subImgSize=(300, 300),
-            legends=legends,
+            legends=all_legends,
             returnPNG=False,
         )
         img.save(str(filepath))
         logger.info(f"Generated isomer image: {filepath}")
-
-        # Upload to S3
         image_path = _upload_to_s3(filepath, s3_key) or f"isomers/{filename}"
 
     result = {
-        "formula": formula,
-        "total": len(isomers),
-        "isomers": isomers,
+        "total_compounds": len(all_compounds),
+        "total_stereoisomers": len(all_mols),
+        "compounds": all_compounds,
         "image_path": image_path,
     }
 
-    logger.info(f"SMILES '{smiles}' → {len(isomers)} isomers")
+    logger.info(f"Generated grid for {len(smiles_list)} compounds → {len(all_mols)} stereoisomers")
     return json.dumps(result, ensure_ascii=False, indent=2)
