@@ -126,7 +126,7 @@ async def lifespan(app: FastAPI):
 # FastAPI app
 app = FastAPI(
     title="Chemistry Chatbot API",
-    description="ReAct agent-powered chemistry chatbot for Grade 11 students",
+    description="ReAct agent-powered chemistry chatbot for high school students",
     version="2.0.0",
     lifespan=lifespan
 )

@@ -32,8 +32,8 @@ class ChemistryResponse(BaseModel):
         description="URL audio phát âm (lấy từ audio_path trong kết quả search_compound)"
     )
 
-# System prompt in Vietnamese for Grade 11 chemistry tutor
-SYSTEM_PROMPT = """Bạn là CHEMI - gia sư Hóa học thân thiện, giúp học sinh lớp 11 Việt Nam học danh pháp IUPAC quốc tế.
+# System prompt in Vietnamese for high school chemistry tutor
+SYSTEM_PROMPT = """Bạn là CHEMI - gia sư Hóa học thân thiện, giúp học sinh THPT Việt Nam học danh pháp IUPAC quốc tế.
 
 ## TOOLS:
 - **search_compound(query)**: Tìm hợp chất → trả về image_path, audio_path

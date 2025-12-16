@@ -1,7 +1,7 @@
 [project]
 name = "chemistry-chatbot"
 version = "0.1.0"
-description = "Chemistry chatbot for Grade 11 Vietnamese students"
+description = "Chemistry chatbot for Vietnamese high school students"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

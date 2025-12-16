@@ -15,7 +15,7 @@ WELCOME_GREETINGS = [
     "Chào bạn! 🧬 CHEMI đây! Bạn cần tra cứu về Sodium, Ethanol hay chất nào khác?",
     "Hi! 😊 CHEMI sẵn sàng giúp bạn học danh pháp IUPAC. Thử hỏi 'Natri là gì?' xem nào!",
     "Xin chào! 🔬 Hôm nay CHEMI có thể giúp gì cho bạn? Nhập tên/công thức hoặc upload hình ảnh cấu trúc phân tử nhé!",
-    "Chào bạn! ⚗️ CHEMI ở đây để giúp bạn với Hóa học lớp 11. Bạn muốn tìm hiểu về chất nào?",
+    "Chào bạn! ⚗️ CHEMI ở đây để giúp bạn với Hóa học THPT. Bạn muốn tìm hiểu về chất nào?",
     "Hello! 🧪 Mình là CHEMI. Hỏi mình về cách phát âm tên IUPAC, cấu trúc phân tử, hay bất cứ điều gì về Hóa học nhé!",
 ]
 
