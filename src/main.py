@@ -3,6 +3,8 @@
 import os
 import json
 import sys
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 # Add project root to path for direct script execution
@@ -14,6 +16,10 @@ from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any, Tuple
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+
+# Agent timeout and recursion settings
+AGENT_TIMEOUT = 10  # seconds
+AGENT_RECURSION_LIMIT = 5  # max tool calls (prevents infinite loops)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -25,6 +31,34 @@ from src.agent import get_agent
 
 load_dotenv(override=True)
 logger = setup_logging(__name__)
+
+# Thread pool for running blocking agent calls
+_executor = ThreadPoolExecutor(max_workers=4)
+
+
+async def invoke_agent_with_timeout(messages, config, timeout=AGENT_TIMEOUT):
+    """Invoke agent with timeout to prevent infinite loops.
+
+    Args:
+        messages: Input messages for the agent
+        config: Agent config (thread_id, recursion_limit)
+        timeout: Max seconds to wait for response
+
+    Returns:
+        Agent result dict
+
+    Raises:
+        asyncio.TimeoutError: If agent takes too long
+    """
+    loop = asyncio.get_event_loop()
+
+    def _invoke():
+        return get_agent().invoke({"messages": messages}, config)
+
+    return await asyncio.wait_for(
+        loop.run_in_executor(_executor, _invoke),
+        timeout=timeout
+    )
 
 
 def parse_structured_response(content: str) -> Tuple[str, Optional[str], Optional[str]]:
@@ -179,12 +213,23 @@ async def query_chemistry(request: QueryRequest):
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"Invalid base64: {str(e)}")
 
-        # Invoke agent
-        config = {"configurable": {"thread_id": thread_id}}
-        result = get_agent().invoke(
-            {"messages": [HumanMessage(content=content if len(content) > 1 else request.text)]},
-            config
-        )
+        # Invoke agent with timeout and recursion limit
+        config = {
+            "configurable": {"thread_id": thread_id},
+            "recursion_limit": AGENT_RECURSION_LIMIT
+        }
+        try:
+            result = await invoke_agent_with_timeout(
+                [HumanMessage(content=content if len(content) > 1 else request.text)],
+                config
+            )
+        except asyncio.TimeoutError:
+            logger.warning(f"Agent timeout after {AGENT_TIMEOUT}s - thread_id: {thread_id}")
+            return QueryResponse(
+                success=False,
+                thread_id=thread_id,
+                error=f"Xin lỗi, yêu cầu mất quá nhiều thời gian. Vui lòng thử lại với câu hỏi đơn giản hơn."
+            )
 
         # Extract response text from last AI message
         messages = result.get("messages", [])
@@ -262,12 +307,23 @@ async def query_with_upload(
                 "image_url": {"url": f"data:image/png;base64,{image_b64}"}
             })
 
-        # Invoke agent
-        config = {"configurable": {"thread_id": thread_id}}
-        result = get_agent().invoke(
-            {"messages": [HumanMessage(content=content if len(content) > 1 else text)]},
-            config
-        )
+        # Invoke agent with timeout and recursion limit
+        config = {
+            "configurable": {"thread_id": thread_id},
+            "recursion_limit": AGENT_RECURSION_LIMIT
+        }
+        try:
+            result = await invoke_agent_with_timeout(
+                [HumanMessage(content=content if len(content) > 1 else text)],
+                config
+            )
+        except asyncio.TimeoutError:
+            logger.warning(f"Agent timeout after {AGENT_TIMEOUT}s - thread_id: {thread_id}")
+            return QueryResponse(
+                success=False,
+                thread_id=thread_id,
+                error=f"Xin lỗi, yêu cầu mất quá nhiều thời gian. Vui lòng thử lại với câu hỏi đơn giản hơn."
+            )
 
         # Extract response
         messages = result.get("messages", [])
