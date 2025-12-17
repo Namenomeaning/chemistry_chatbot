@@ -957,7 +957,13 @@
     "iupac_name": "Ethanol",
     "formula": "C2H5OH",
     "image_path": "https://chemistry-chatbot-assets.s3.ap-southeast-1.amazonaws.com/compounds/images/ethanol.png",
-    "audio_path": "https://chemistry-chatbot-assets.s3.ap-southeast-1.amazonaws.com/compounds/audio/ethanol.wav"
+    "audio_path": "https://chemistry-chatbot-assets.s3.ap-southeast-1.amazonaws.com/compounds/audio/ethanol.wav",
+    "common_names": [
+      "Rượu etylic",
+      "Ancol etylic",
+      "Cồn",
+      "Etanol"
+    ]
   },
   {
     "type": "compound",
@@ -965,7 +971,11 @@
     "iupac_name": "Methane",
     "formula": "CH4",
     "image_path": "https://chemistry-chatbot-assets.s3.ap-southeast-1.amazonaws.com/compounds/images/methane.png",
-    "audio_path": "https://chemistry-chatbot-assets.s3.ap-southeast-1.amazonaws.com/compounds/audio/methane.wav"
+    "audio_path": "https://chemistry-chatbot-assets.s3.ap-southeast-1.amazonaws.com/compounds/audio/methane.wav",
+    "common_names": [
+      "Metan",
+      "Mê-tan"
+    ]
   },
   {
     "type": "compound",
@@ -1032,7 +1042,8 @@
     "molecular_formula": "C4H10",
     "common_names": [
       "Butan",
-      "n-Butane"
+      "n-Butane",
+      "n-Butan"
     ],
     "class": "Alkane",
     "info": "Alkane 4 carbon, có 2 đồng phân cấu tạo: n-butane (mạch thẳng) và isobutane (mạch nhánh).",
@@ -1062,7 +1073,8 @@
     "molecular_formula": "C5H12",
     "common_names": [
       "Pentan",
-      "n-Pentane"
+      "n-Pentane",
+      "n-Pentan"
     ],
     "class": "Alkane",
     "info": "Alkane 5 carbon, có 3 đồng phân cấu tạo."

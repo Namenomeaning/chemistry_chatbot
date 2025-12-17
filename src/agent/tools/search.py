@@ -62,9 +62,17 @@ def search_compound(query: str) -> str:
     query_upper = query.upper().strip()
     results = []
 
-    # Check if query looks like a formula (e.g., C4H10, CH4, C2H5OH)
+    # Detect formula vs name query
+    # Formula: C4H10, CH4, H2O (letters+digits, no hyphens/spaces)
+    # Name with position: propan-1-ol, 2-methylpropane (has hyphen before/after digit)
+    # Element symbol: Na, H, Fe (1-2 chars)
     import re
-    is_formula_query = bool(re.match(r'^[A-Z][a-zA-Z0-9]+$', query.strip()))
+    query_stripped = query.strip()
+    has_digits = bool(re.search(r'\d', query_stripped))
+    has_hyphen = '-' in query_stripped
+    is_short_symbol = len(query_stripped) <= 2 and query_stripped[0].isupper()
+    # Formula has digits but NO hyphen (C4H10 vs propan-1-ol)
+    is_formula_query = (has_digits and not has_hyphen) or is_short_symbol
 
     for compound in compounds:
         iupac_name = compound.get("iupac_name", "").lower()
