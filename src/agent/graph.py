@@ -1,15 +1,12 @@
-"""Simplified LangGraph workflow using ReAct agent with tools."""
+"""Chemistry chatbot agent with ReAct pattern."""
 
 import os
 from typing import Optional
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
-
-from langchain.agents import create_agent
-from langgraph.checkpoint.memory import MemorySaver
 from langchain_openai import ChatOpenAI
+from langchain.agents import create_react_agent, AgentExecutor
 
-from .tools import search_compound, generate_isomers
 from ..core.logging import setup_logging
 
 load_dotenv()
@@ -19,120 +16,79 @@ logger = setup_logging(__name__)
 # Structured output schema
 class ChemistryResponse(BaseModel):
     """Structured response from chemistry chatbot."""
+    text_response: str = Field(description="Response text in Vietnamese")
+    image_url: Optional[str] = Field(default=None, description="Image URL")
+    audio_url: Optional[str] = Field(default=None, description="Audio URL")
 
-    text_response: str = Field(
-        description="Câu trả lời đầy đủ cho học sinh (markdown format)"
-    )
-    image_url: Optional[str] = Field(
-        default=None,
-        description="URL hình ảnh cấu trúc (lấy từ image_path trong kết quả search_compound)"
-    )
-    audio_url: Optional[str] = Field(
-        default=None,
-        description="URL audio phát âm (lấy từ audio_path trong kết quả search_compound)"
-    )
 
-# System prompt in Vietnamese for high school chemistry tutor
 SYSTEM_PROMPT = """Bạn là CHEMI - gia sư Hóa học THPT thân thiện, vui vẻ.
 
-<capabilities>
-- Tra cứu hợp chất: tên IUPAC, CTPT, cấu trúc, phát âm
-- Tạo ảnh đồng phân: mạch carbon, vị trí, nhóm chức, lập thể
-- Giải thích danh pháp IUPAC quốc tế
-</capabilities>
-
 <tools>
-search_compound(query) → thông tin, image_path, audio_path
-generate_isomers(smiles_list, formula) → image_path (validate CTPT)
-</tools>
+1. search_compound(query) - Tra cứu thông tin hợp chất/nguyên tố
+2. search_image(keyword) - Tìm hình ảnh cấu trúc từ Internet
+3. generate_speech(text, voice) - Tạo âm thanh phát âm
 
-<important>
-- Nếu search_compound trả về "Không tìm thấy": DỪNG NGAY, trả lời "Chất này chưa có trong dữ liệu của mình". KHÔNG dùng generate_isomers.
-- KHÔNG lặp lại cùng một search nhiều lần
-- CHỈ dùng generate_isomers khi câu hỏi CÓ TỪ "đồng phân" hoặc "isomer"
-- Nếu chỉ hỏi "X là gì?" mà không có từ "đồng phân" → chỉ dùng search_compound
-</important>
-
-<isomer_rules>
-CHỈ áp dụng khi user HỎI VỀ ĐỒNG PHÂN (có từ "đồng phân", "isomer", "các dạng"):
-- Mạch carbon C4H10: generate_isomers(["CCCC", "CC(C)C"], formula="C4H10")
-- Vị trí C3H8O: generate_isomers(["CCCO", "CC(O)C"], formula="C3H8O")
-- Nhóm chức C3H8O: generate_isomers(["CCCO", "CC(O)C", "COCC"], formula="C3H8O")
-- Lập thể: generate_isomers(["CC=CC"], formula="C4H8") → tự tạo E/Z
-LUÔN truyền formula để validate CTPT.
-</isomer_rules>
+<rules>
+- Gọi search_compound TRƯỚC để lấy thông tin chính xác
+- Nếu không tìm thấy → DỪNG, không gọi tool khác
+- Hỏi về "hình ảnh" hoặc "cấu trúc" → gọi search_image
+- Hỏi về "phát âm" → gọi generate_speech
+- Trả lời bằng Tiếng Việt, thân thiện
 
 <style>
-- Xưng hô: "mình/bạn", thân thiện như bạn học cùng lớp
-- Khích lệ: "Câu hỏi hay!", "Đúng rồi!", "Cùng tìm hiểu nhé!"
-- Tên IUPAC + phiên âm: "Ethanol (ét-tha-nol)"
-- Sửa lỗi nhẹ nhàng: "À, theo chuẩn IUPAC thì gọi là **Sodium** nha!"
-- Giải thích dễ hiểu, có ví dụ thực tế
-- Cuối: gợi ý câu hỏi tiếp theo
+- Khích lệ: "Câu hỏi hay!", "Cùng tìm hiểu nhé!"
+- Giải thích dễ hiểu, có ví dụ
+- Kết thúc với gợi ý tiếp theo
 </style>
-
-<output>
-text_response: markdown, KHÔNG ![](url), KHÔNG [text] đơn lẻ
-image_url: copy từ tool.image_path
-audio_url: copy từ tool.audio_path
-</output>"""
+"""
 
 
-# Global instances (lazy loaded)
-_agent = None
-_memory = None
+# Global agent instance
+_agent_executor = None
 
 
-def get_memory():
-    """Get or create the memory checkpointer (singleton)."""
-    global _memory
-    if _memory is None:
-        _memory = MemorySaver()
-    return _memory
-
-
-def build_agent():
-    """Build the chemistry chatbot agent with tools and memory.
-
-    Returns:
-        Compiled ReAct agent with MemorySaver checkpointer
-    """
-    global _agent
-
-    if _agent is not None:
-        return _agent
-
-    # Initialize LLM (OpenAI-compatible API)
+def get_agent() -> AgentExecutor:
+    """Get or create the agent executor."""
+    global _agent_executor
+    
+    if _agent_executor is not None:
+        return _agent_executor
+    
+    # Setup LLM
     api_key = os.getenv("OPENAI_API_KEY")
     base_url = os.getenv("OPENAI_BASE_URL", "https://gpt3.shupremium.com/v1")
     model_name = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-
+    
     if not api_key:
-        raise ValueError("OPENAI_API_KEY not found in environment")
-
+        raise ValueError("OPENAI_API_KEY not found")
+    
     llm = ChatOpenAI(
-        model=model_name,
         api_key=api_key,
         base_url=base_url,
+        model=model_name,
         temperature=0.3,
     )
-
-    # Tools list
-    tools = [search_compound, generate_isomers]
-
-    # Create agent with shared memory and structured output (LangChain 1.0 API)
-    _agent = create_agent(
-        model=llm,
+    
+    # Import tools here to avoid circular imports
+    from .search import search_compound
+    from .image_search import search_image
+    from .speech import generate_speech
+    
+    tools = [search_compound, search_image, generate_speech]
+    
+    # Create agent
+    agent = create_react_agent(llm, tools, prompt=SYSTEM_PROMPT)
+    _agent_executor = AgentExecutor.from_agent_and_tools(
+        agent=agent,
         tools=tools,
-        checkpointer=get_memory(),
-        system_prompt=SYSTEM_PROMPT,
-        response_format=ChemistryResponse,
+        verbose=True,
+        handle_parsing_errors=True,
     )
+    
+    logger.info("Chemistry agent initialized")
+    return _agent_executor
 
-    logger.info("Chemistry agent built with ReAct pattern and memory")
-    return _agent
 
-
-def get_agent():
-    """Get the agent instance (lazy loading)."""
-    return build_agent()
+def build_agent() -> AgentExecutor:
+    """Build and return the agent (alias for backward compatibility)."""
+    return get_agent()
