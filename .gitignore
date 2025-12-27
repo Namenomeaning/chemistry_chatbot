@@ -94,3 +94,11 @@ models
 access_key*.csv
 *accessKeys*.csv
 data/isomers/
+
+data
+
+ssl/
+certbot/
+
+.mcp.json
+CLAUDE.md

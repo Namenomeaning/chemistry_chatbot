@@ -1,45 +1,11 @@
-# Git
 .git
 .gitignore
-
-# Python
-__pycache__
-*.py[cod]
-*$py.class
-*.so
-.Python
-.venv
-venv/
-ENV/
-.pytest_cache/
-.coverage
-htmlcov/
-*.egg-info/
-dist/
-build/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Project specific
 .env
-.env.*
-!.env.example
+.venv
+.claude
+.gradio
+.vscode
+__pycache__
+*.pyc
 *.md
-!README.md
-.claude/
-.devcontainer/
-.github/
-.gradio/
-qdrant_storage/
-tests/
-models/
-
-# Temp files
-*.log
-*.tmp
-.DS_Store
-Thumbs.db
+data/tts_output/*

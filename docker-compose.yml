@@ -1,80 +1,39 @@
-# CHEMI - Chemistry Chatbot Docker Compose
-# Run: docker compose up -d
-
 services:
-  # FastAPI Backend
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: chemi-backend
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
+  app:
+    build: .
+    container_name: chemi-app
+    env_file: .env
     volumes:
-      - ./data:/app/data:ro  # Read-only data volume
+      - ./data:/app/data
     restart: unless-stopped
-    networks:
-      - chemi-network
+    expose:
+      - "8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
-      start_period: 10s
-    # depends_on:
-    #   - qdrant  # Uncomment when using Qdrant
 
-  # Gradio Frontend
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: chemi-frontend
+  nginx:
+    image: nginx:alpine
+    container_name: chemi-nginx
     ports:
-      - "7860:7860"
-    environment:
-      - API_BASE_URL=http://backend:8000
-    env_file:
-      - .env
-    command: ["uv", "run", "python", "gradio/app.py"]
-    restart: unless-stopped
-    networks:
-      - chemi-network
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
     depends_on:
-      backend:
+      app:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7860/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
+    restart: unless-stopped
 
-  # Qdrant Vector Database (uncomment when needed)
-  # qdrant:
-  #   image: qdrant/qdrant:v1.15.0
-  #   container_name: chemi-qdrant
-  #   ports:
-  #     - "6333:6333"
-  #     - "6334:6334"
-  #   volumes:
-  #     - qdrant_storage:/qdrant/storage
-  #   environment:
-  #     - QDRANT__SERVICE__GRPC_PORT=6334
-  #   restart: unless-stopped
-  #   networks:
-  #     - chemi-network
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-
-networks:
-  chemi-network:
-    driver: bridge
-
-# volumes:
-#   qdrant_storage:  # Uncomment when using Qdrant
+  certbot:
+    image: certbot/certbot
+    container_name: chemi-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    restart: unless-stopped
