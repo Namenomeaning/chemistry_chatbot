@@ -1,4 +1,4 @@
-"""Chemistry chatbot tools."""
+"""Các công cụ (tools) cho chatbot hóa học."""
 
 import os
 import time

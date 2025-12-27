@@ -1,4 +1,4 @@
-"""CHEMI Agent - ReAct agent for chemistry chatbot."""
+"""CHEMI Agent - Agent ReAct cho chatbot hóa học."""
 
 import os
 import asyncio
@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
-from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 
 from src.tools import search_image, generate_speech
 
@@ -19,7 +19,7 @@ load_dotenv()
 # ============== Response Schema ==============
 
 class ChemistryResponse(BaseModel):
-    """Agent structured output."""
+    """Định dạng output có cấu trúc của agent."""
     text_response: str = Field(description="Câu trả lời bằng tiếng Việt")
     image_url: Optional[str] = Field(default=None, description="URL hình ảnh cấu trúc")
     audio_url: Optional[str] = Field(default=None, description="Đường dẫn file audio")
@@ -71,11 +71,12 @@ RECURSION_LIMIT = 10
 # ============== Agent ==============
 
 _agent = None
-_executor = ThreadPoolExecutor(max_workers=4)
+_executor = ThreadPoolExecutor(max_workers=8)
+_checkpointer = SqliteSaver.from_conn_string("data/checkpoints.db")
 
 
 def get_agent():
-    """Get or create agent."""
+    """Lấy hoặc khởi tạo agent."""
     global _agent
     if _agent:
         return _agent
@@ -93,20 +94,20 @@ def get_agent():
         tools=[search_image, generate_speech],
         system_prompt=SYSTEM_PROMPT,
         response_format=ChemistryResponse,
-        checkpointer=InMemorySaver(),
+        checkpointer=_checkpointer,
     )
     return _agent
 
 
 async def invoke_agent(messages: list, thread_id: str) -> dict:
-    """Invoke agent.
+    """Gọi agent xử lý tin nhắn.
 
     Args:
-        messages: List of message dicts with 'role' and 'content'
-        thread_id: Conversation thread ID for memory
+        messages: Danh sách tin nhắn dạng dict với 'role' và 'content'
+        thread_id: ID cuộc hội thoại để lưu trữ bộ nhớ
 
     Returns:
-        Agent result dict with 'structured_response' key
+        Dict kết quả từ agent với key 'structured_response'
     """
     config = {"configurable": {"thread_id": thread_id}, "recursion_limit": RECURSION_LIMIT}
     loop = asyncio.get_event_loop()

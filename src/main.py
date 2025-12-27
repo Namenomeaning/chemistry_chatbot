@@ -1,4 +1,4 @@
-"""CHEMI - FastAPI Backend for Chemistry Chatbot."""
+"""CHEMI - Backend FastAPI cho Chatbot Hóa học."""
 
 import os
 import base64
@@ -9,7 +9,7 @@ from typing import Optional
 
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -26,14 +26,14 @@ logger = logging.getLogger(__name__)
 # ============== Request/Response Schemas ==============
 
 class QueryRequest(BaseModel):
-    """API request for text query."""
+    """Request API cho truy vấn văn bản/hình ảnh."""
     text: Optional[str] = None
     image_base64: Optional[str] = None
     thread_id: Optional[str] = None
 
 
 class QueryResponse(BaseModel):
-    """API response."""
+    """Response API trả về cho client."""
     success: bool
     thread_id: str
     text_response: Optional[str] = None
@@ -45,7 +45,7 @@ class QueryResponse(BaseModel):
 # ============== Helpers ==============
 
 def to_base64(file_path: Optional[str]) -> Optional[str]:
-    """Convert local file to base64 or return URL directly."""
+    """Chuyển đổi file cục bộ sang base64 hoặc trả về URL trực tiếp."""
     if not file_path:
         return None
     if file_path.startswith(("http://", "https://")):
@@ -59,7 +59,7 @@ async def process_query(
     image_base64: Optional[str],
     thread_id: Optional[str]
 ) -> QueryResponse:
-    """Process a query and return response."""
+    """Xử lý truy vấn và trả về kết quả."""
     if not text and not image_base64:
         raise HTTPException(400, "text or image required")
 
@@ -118,13 +118,13 @@ if STATIC_DIR.exists():
 
 @app.get("/health")
 async def health():
-    """Health check endpoint."""
+    """Endpoint kiểm tra trạng thái hoạt động."""
     return {"status": "ok", "service": "CHEMI Chemistry Chatbot"}
 
 
 @app.get("/")
 async def root():
-    """Serve the main chat UI."""
+    """Phục vụ giao diện chat chính."""
     index_path = STATIC_DIR / "index.html"
     if index_path.exists():
         return FileResponse(index_path)
@@ -133,23 +133,8 @@ async def root():
 
 @app.post("/query", response_model=QueryResponse)
 async def query(request: QueryRequest):
-    """Query endpoint for text/base64 image input."""
+    """Endpoint truy vấn cho văn bản hoặc hình ảnh base64."""
     return await process_query(request.text, request.image_base64, request.thread_id)
-
-
-@app.post("/query/upload", response_model=QueryResponse)
-async def query_upload(
-    text: Optional[str] = Form(None),
-    thread_id: Optional[str] = Form(None),
-    image: Optional[UploadFile] = File(None)
-):
-    """Query endpoint for file upload input (used by Gradio)."""
-    image_base64 = None
-    if image:
-        image_bytes = await image.read()
-        image_base64 = base64.b64encode(image_bytes).decode()
-
-    return await process_query(text, image_base64, thread_id)
 
 
 # ============== Main ==============
@@ -160,5 +145,7 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=int(os.getenv("PORT", "8000")),
-        reload=True
+        reload=os.getenv("ENV", "production") != "production",
+        workers=1,
+        limit_concurrency=10,
     )

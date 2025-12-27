@@ -102,3 +102,9 @@ certbot/
 
 .mcp.json
 CLAUDE.md
+
+# Deployment docs (private)
+deploy/DEPLOY.md
+
+# Claude Code local settings (keep skills/commands in repo if you want to share)
+.claude/settings.json
